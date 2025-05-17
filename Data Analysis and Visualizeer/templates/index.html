@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Data Analysis & Visualizer</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Roboto&display=swap" rel="stylesheet">
+    <!-- Styling -->
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: #121212;
+            color: #E0E0E0;
+            font-family: 'Roboto', sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: auto;
+            padding: 30px;
+        }
+
+        h2 {
+            text-align: center;
+            color: #00bcd4;
+            margin-bottom: 30px;
+        }
+
+        #chatbox {
+            background-color: #1e1e1e;
+            border-radius: 8px;
+            padding: 20px;
+            height: 400px;
+            overflow-y: auto;
+            border: 1px solid #333;
+            margin-bottom: 20px;
+        }
+
+        .message {
+            margin-bottom: 15px;
+        }
+
+        .user {
+            color: #90caf9;
+        }
+
+        .bot {
+            color: #a5d6a7;
+        }
+
+        input[type="file"] {
+            display: block;
+            margin: 0 auto 20px auto;
+            background-color: #1e1e1e;
+            color: #e0e0e0;
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #333;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 10px;
+        }
+
+        input[type="text"] {
+            flex: 1;
+            padding: 12px;
+            border-radius: 5px;
+            border: none;
+            background-color: #2c2c2c;
+            color: #fff;
+        }
+
+        button {
+            padding: 12px 18px;
+            border: none;
+            background-color: #00bcd4;
+            color: white;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        button:hover {
+            background-color: #0097a7;
+        }
+
+        img {
+            max-width: 100%;
+            border-radius: 8px;
+            margin-top: 10px;
+            border: 1px solid #555;
+        }
+
+        @media (max-width: 600px) {
+            .input-group {
+                flex-direction: column;
+            }
+
+            button {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div align="right">
+    <a href="/search"><img src="static\Screenshot 2025-05-14 085603.png" width="25px"></a>
+    <a href="/logout"><img src="static\image.png" width="25px"></a>
+    </div>
+    
+    <div class="container">
+        <h2>💬 DataSet – Analyzer and Visualizer of CSV</h2>
+        <input type="file" id="fileInput" accept=".csv">
+        <div id="chatbox"></div>
+        <div class="input-group">
+            <input type="text" id="userInput" placeholder="Ask a question about your dataset...">
+            
+            <button onclick="sendMessage()">Send</button>
+
+        </div>
+    </div>
+
+    <script>
+     
+        document.getElementById('fileInput').addEventListener('change', function () {
+            const file = this.files[0];
+            const formData = new FormData();
+            formData.append('file', file);
+
+            fetch('/upload', {
+                method: 'POST',
+                body: formData
+            })
+            .then(res => res.json())
+            .then(data => {
+                appendMessage("System", data.message, "bot");
+
+                if (data.column_info) {
+                    let infoHtml = `<p><strong>🧾 Column Info:</strong></p><ul>`;
+                    for (const [col, dtype] of Object.entries(data.column_info)) {
+                        infoHtml += `<li><code>${col}</code>: <em>${dtype}</em></li>`;
+                    }
+                    infoHtml += `</ul>`;
+                    document.getElementById('chatbox').innerHTML += infoHtml;
+                    document.getElementById('chatbox').scrollTop = document.getElementById('chatbox').scrollHeight;
+                }
+            });
+        });
+
+        function sendMessage() {
+            const input = document.getElementById('userInput');
+            const message = input.value.trim();
+            if (!message) return;
+
+            appendMessage("You", message, "user");
+            input.value = '';
+
+            fetch('/chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message: message })
+            })
+            .then(res => res.json())
+            .then(data => {
+                appendMessage("Bot", data.response, "bot");
+                if (data.image) {
+                    appendImage(data.image);
+                }
+            });
+        }
+
+        function appendMessage(sender, text, type) {
+            const chatbox = document.getElementById('chatbox');
+            const msgDiv = document.createElement('div');
+            msgDiv.className = `message ${type}`;
+            msgDiv.innerHTML = `<strong>${sender}:</strong> ${text}`;
+            chatbox.appendChild(msgDiv);
+            chatbox.scrollTop = chatbox.scrollHeight;
+        }
+
+        function appendImage(src) {
+            const chatbox = document.getElementById('chatbox');
+            const img = document.createElement('img');
+            img.src = src;
+            img.alt = "Data Visualization";
+            chatbox.appendChild(img);
+            chatbox.scrollTop = chatbox.scrollHeight;
+        }
+    </script>
+</body>
+</html>
